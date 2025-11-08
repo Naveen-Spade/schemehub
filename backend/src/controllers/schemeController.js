@@ -1,6 +1,7 @@
 const Scheme = require('../models/Scheme');
 const Category = require('../models/Category');
 const SavedScheme = require('../models/SavedScheme');
+const User = require('../models/User');
 
 // Get all schemes with filtering and pagination
 const getAllSchemes = async (req, res) => {
