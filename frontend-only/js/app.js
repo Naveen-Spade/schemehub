@@ -622,6 +622,613 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
+// Admin Navigation Functions
+function addAdminNavLink() {
+    const navMenu = document.getElementById('navMenu');
+    if (navMenu && !document.getElementById('adminNavLink')) {
+        const adminLink = document.createElement('a');
+        adminLink.id = 'adminNavLink';
+        adminLink.href = '#admin';
+        adminLink.className = 'nav-link';
+        adminLink.setAttribute('data-page', 'admin');
+        adminLink.textContent = 'Admin';
+        adminLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            showPage('admin');
+        });
+
+        // Insert before auth buttons
+        const authButtons = navMenu.querySelector('.auth-buttons');
+        if (authButtons) {
+            navMenu.insertBefore(adminLink, authButtons);
+        }
+    }
+}
+
+function removeAdminNavLink() {
+    const adminLink = document.getElementById('adminNavLink');
+    if (adminLink) {
+        adminLink.remove();
+    }
+}
+
+// Admin Functions
+function showAdminDashboard() {
+    if (!currentUser || currentUser.role !== 'admin') {
+        showNotification('Access denied. Admin privileges required.', 'error');
+        return;
+    }
+
+    const schemesGrid = document.getElementById('schemesGrid');
+    if (schemesGrid) {
+        schemesGrid.innerHTML = `
+            <div class="admin-dashboard">
+                <div class="admin-header">
+                    <h1>Admin Dashboard</h1>
+                    <div class="admin-actions">
+                        <button class="btn btn-primary" onclick="showAddSchemeForm()">➕ Add New Scheme</button>
+                        <button class="btn btn-outline" onclick="exportSchemes()">📥 Export Schemes</button>
+                    </div>
+                </div>
+
+                <div class="admin-stats">
+                    <div class="stat-card">
+                        <h3>${mockSchemes.length}</h3>
+                        <p>Total Schemes</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>${mockCategories.length}</h3>
+                        <p>Categories</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>${getActiveSchemesCount()}</h3>
+                        <p>Active Schemes</p>
+                    </div>
+                </div>
+
+                <div class="admin-schemes">
+                    <h2>All Schemes</h2>
+                    <div class="admin-schemes-grid" id="adminSchemesGrid">
+                        ${createAdminSchemeCards()}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Hide load more button
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    if (loadMoreBtn) {
+        loadMoreBtn.style.display = 'none';
+    }
+}
+
+function createAdminSchemeCards() {
+    return mockSchemes.map(scheme => `
+        <div class="admin-scheme-card">
+            <div class="admin-scheme-content">
+                <h3>${scheme.name}</h3>
+                <span class="scheme-category">${scheme.category}</span>
+                <p>${scheme.description.substring(0, 100)}...</p>
+                <div class="admin-scheme-actions">
+                    <button class="btn btn-outline btn-sm" onclick="editScheme(${scheme.id})">✏️ Edit</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteScheme(${scheme.id})">🗑️ Delete</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getActiveSchemesCount() {
+    return mockSchemes.length; // All schemes are considered active in this mock
+}
+
+function showAddSchemeForm() {
+    const modal = document.getElementById('schemeModal');
+    const modalBody = document.getElementById('modalBody');
+
+    modalBody.innerHTML = `
+        <div class="admin-form">
+            <h2>Add New Scheme</h2>
+            <form id="addSchemeForm" onsubmit="handleAddScheme(event)">
+                <div class="form-group">
+                    <label for="schemeName">Scheme Name *</label>
+                    <input type="text" id="schemeName" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="schemeCategory">Category *</label>
+                    <select id="schemeCategory" required>
+                        ${mockCategories.map(cat => `<option value="${cat.name}">${cat.name}</option>`).join('')}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="schemeDescription">Short Description *</label>
+                    <input type="text" id="schemeDescription" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="schemeFullDescription">Full Description *</label>
+                    <textarea id="schemeFullDescription" rows="4" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="schemeEligibility">Eligibility Criteria (comma separated) *</label>
+                    <input type="text" id="schemeEligibility" placeholder="e.g., Must be Indian citizen, Age above 18" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="schemeBenefits">Benefits (comma separated) *</label>
+                    <input type="text" id="schemeBenefits" placeholder="e.g., Financial assistance, Training programs" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="schemeSteps">Application Steps (comma separated) *</label>
+                    <input type="text" id="schemeSteps" placeholder="e.g., Register online, Submit documents" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="schemeWebsite">Official Website *</label>
+                    <input type="url" id="schemeWebsite" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="schemeState">State</label>
+                        <select id="schemeState">
+                            <option value="All India">All India</option>
+                            <option value="Delhi">Delhi</option>
+                            <option value="Maharashtra">Maharashtra</option>
+                            <option value="Karnataka">Karnataka</option>
+                            <option value="Tamil Nadu">Tamil Nadu</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="schemeMinAge">Minimum Age</label>
+                        <input type="number" id="schemeMinAge" min="0" placeholder="0 if no limit">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="schemeMaxAge">Maximum Age</label>
+                        <input type="number" id="schemeMaxAge" min="0" placeholder="Leave empty if no limit">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">💾 Save Scheme</button>
+                    <button type="button" class="btn btn-outline" onclick="closeSchemeModal()">❌ Cancel</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    modal.style.display = 'block';
+}
+
+function handleAddScheme(event) {
+    event.preventDefault();
+
+    const newScheme = {
+        id: Math.max(...mockSchemes.map(s => s.id)) + 1,
+        name: document.getElementById('schemeName').value,
+        category: document.getElementById('schemeCategory').value,
+        description: document.getElementById('schemeDescription').value,
+        eligibility: document.getElementById('schemeEligibility').value.split(',').map(item => item.trim()),
+        benefits: document.getElementById('schemeBenefits').value.split(',').map(item => item.trim()),
+        applicationSteps: document.getElementById('schemeSteps').value.split(',').map(item => item.trim()),
+        officialWebsite: document.getElementById('schemeWebsite').value,
+        state: document.getElementById('schemeState').value,
+        minAge: parseInt(document.getElementById('schemeMinAge').value) || null,
+        maxAge: parseInt(document.getElementById('schemeMaxAge').value) || null
+    };
+
+    mockSchemes.push(newScheme);
+    filteredSchemes = [...mockSchemes];
+
+    showNotification('Scheme added successfully!', 'success');
+    closeSchemeModal();
+    showAdminDashboard();
+}
+
+function editScheme(schemeId) {
+    const scheme = mockSchemes.find(s => s.id === schemeId);
+    if (!scheme) return;
+
+    const modal = document.getElementById('schemeModal');
+    const modalBody = document.getElementById('modalBody');
+
+    modalBody.innerHTML = `
+        <div class="admin-form">
+            <h2>Edit Scheme</h2>
+            <form id="editSchemeForm" onsubmit="handleEditScheme(event, ${schemeId})">
+                <div class="form-group">
+                    <label for="schemeName">Scheme Name *</label>
+                    <input type="text" id="schemeName" value="${scheme.name}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="schemeCategory">Category *</label>
+                    <select id="schemeCategory" required>
+                        ${mockCategories.map(cat =>
+                            `<option value="${cat.name}" ${scheme.category === cat.name ? 'selected' : ''}>${cat.name}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="schemeDescription">Short Description *</label>
+                    <input type="text" id="schemeDescription" value="${scheme.description}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="schemeFullDescription">Full Description *</label>
+                    <textarea id="schemeFullDescription" rows="4" required>${scheme.description}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="schemeEligibility">Eligibility Criteria (comma separated) *</label>
+                    <input type="text" id="schemeEligibility" value="${scheme.eligibility.join(', ')}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="schemeBenefits">Benefits (comma separated) *</label>
+                    <input type="text" id="schemeBenefits" value="${scheme.benefits.join(', ')}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="schemeSteps">Application Steps (comma separated) *</label>
+                    <input type="text" id="schemeSteps" value="${scheme.applicationSteps.join(', ')}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="schemeWebsite">Official Website *</label>
+                    <input type="url" id="schemeWebsite" value="${scheme.officialWebsite}" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="schemeState">State</label>
+                        <select id="schemeState">
+                            <option value="All India" ${scheme.state === 'All India' ? 'selected' : ''}>All India</option>
+                            <option value="Delhi" ${scheme.state === 'Delhi' ? 'selected' : ''}>Delhi</option>
+                            <option value="Maharashtra" ${scheme.state === 'Maharashtra' ? 'selected' : ''}>Maharashtra</option>
+                            <option value="Karnataka" ${scheme.state === 'Karnataka' ? 'selected' : ''}>Karnataka</option>
+                            <option value="Tamil Nadu" ${scheme.state === 'Tamil Nadu' ? 'selected' : ''}>Tamil Nadu</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="schemeMinAge">Minimum Age</label>
+                        <input type="number" id="schemeMinAge" value="${scheme.minAge || ''}" min="0" placeholder="0 if no limit">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="schemeMaxAge">Maximum Age</label>
+                        <input type="number" id="schemeMaxAge" value="${scheme.maxAge || ''}" min="0" placeholder="Leave empty if no limit">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">💾 Update Scheme</button>
+                    <button type="button" class="btn btn-outline" onclick="closeSchemeModal()">❌ Cancel</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    modal.style.display = 'block';
+}
+
+function handleEditScheme(event, schemeId) {
+    event.preventDefault();
+
+    const schemeIndex = mockSchemes.findIndex(s => s.id === schemeId);
+    if (schemeIndex === -1) return;
+
+    const updatedScheme = {
+        ...mockSchemes[schemeIndex],
+        name: document.getElementById('schemeName').value,
+        category: document.getElementById('schemeCategory').value,
+        description: document.getElementById('schemeDescription').value,
+        eligibility: document.getElementById('schemeEligibility').value.split(',').map(item => item.trim()),
+        benefits: document.getElementById('schemeBenefits').value.split(',').map(item => item.trim()),
+        applicationSteps: document.getElementById('schemeSteps').value.split(',').map(item => item.trim()),
+        officialWebsite: document.getElementById('schemeWebsite').value,
+        state: document.getElementById('schemeState').value,
+        minAge: parseInt(document.getElementById('schemeMinAge').value) || null,
+        maxAge: parseInt(document.getElementById('schemeMaxAge').value) || null
+    };
+
+    mockSchemes[schemeIndex] = updatedScheme;
+    filteredSchemes = [...mockSchemes];
+
+    showNotification('Scheme updated successfully!', 'success');
+    closeSchemeModal();
+    showAdminDashboard();
+}
+
+function deleteScheme(schemeId) {
+    if (confirm('Are you sure you want to delete this scheme? This action cannot be undone.')) {
+        const index = mockSchemes.findIndex(s => s.id === schemeId);
+        if (index > -1) {
+            const schemeName = mockSchemes[index].name;
+            mockSchemes.splice(index, 1);
+            filteredSchemes = filteredSchemes.filter(s => s.id !== schemeId);
+
+            showNotification(`"${schemeName}" has been deleted successfully.`, 'success');
+            showAdminDashboard();
+        }
+    }
+}
+
+function exportSchemes() {
+    const dataStr = JSON.stringify(mockSchemes, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+
+    const exportFileDefaultName = `schemes_export_${new Date().toISOString().split('T')[0]}.json`;
+
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+
+    showNotification('Schemes exported successfully!', 'success');
+}
+
+// Update the scheme details modal for admin users
+const originalShowSchemeDetails = showSchemeDetails;
+function showSchemeDetails(schemeId) {
+    const scheme = mockSchemes.find(s => s.id === schemeId);
+    if (!scheme) return;
+
+    const modal = document.getElementById('schemeModal');
+    const modalBody = document.getElementById('modalBody');
+
+    const isSaved = savedSchemes.includes(schemeId);
+    const isAdmin = currentUser && currentUser.role === 'admin';
+
+    modalBody.innerHTML = `
+        <div class="scheme-details">
+            <h2>${scheme.name}</h2>
+            <span class="scheme-category">${scheme.category}</span>
+
+            <div class="scheme-detail-section">
+                <h3>Description</h3>
+                <p>${scheme.description}</p>
+            </div>
+
+            <div class="scheme-detail-section">
+                <h3>Eligibility Criteria</h3>
+                <ul>
+                    ${scheme.eligibility.map(criteria => `<li>${criteria}</li>`).join('')}
+                </ul>
+            </div>
+
+            <div class="scheme-detail-section">
+                <h3>Benefits</h3>
+                <ul>
+                    ${scheme.benefits.map(benefit => `<li>${benefit}</li>`).join('')}
+                </ul>
+            </div>
+
+            <div class="scheme-detail-section">
+                <h3>Application Steps</h3>
+                <ol>
+                    ${scheme.applicationSteps.map((step, index) => `<li>${step}</li>`).join('')}
+                </ol>
+            </div>
+
+            <div class="scheme-detail-section">
+                <h3>Additional Information</h3>
+                <p><strong>State:</strong> ${scheme.state}</p>
+                <p><strong>Age Limit:</strong> ${scheme.minAge ? `${scheme.minAge}+ years` : 'No age limit'}</p>
+                <p><strong>Official Website:</strong> <a href="${scheme.officialWebsite}" target="_blank">${scheme.officialWebsite}</a></p>
+            </div>
+
+            <div class="scheme-actions">
+                <button class="btn btn-primary" onclick="window.open('${scheme.officialWebsite}', '_blank')">
+                    Visit Official Website
+                </button>
+
+                ${currentUser ? `
+                    <button class="btn ${isSaved ? 'btn-outline' : 'btn-primary'}" onclick="toggleSaveScheme(${scheme.id})">
+                        ${isSaved ? 'Remove from Saved' : 'Save Scheme'}
+                    </button>
+                ` : `
+                    <button class="btn btn-outline" onclick="showLoginForm()">
+                        Login to Save
+                    </button>
+                `}
+
+                ${isAdmin ? `
+                    <button class="btn btn-outline" onclick="editScheme(${scheme.id})">✏️ Edit</button>
+                    <button class="btn btn-danger" onclick="deleteScheme(${scheme.id})">🗑️ Delete</button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+
+    modal.style.display = 'block';
+}
+
+// Add admin specific styles
+const adminStyles = document.createElement('style');
+adminStyles.textContent = `
+    .admin-dashboard {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .admin-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .admin-actions {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .admin-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+    }
+
+    .stat-card {
+        background: #f8f9fa;
+        padding: 2rem;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .stat-card h3 {
+        font-size: 2.5rem;
+        color: #3b82f6;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-card p {
+        color: #666;
+        font-weight: 500;
+    }
+
+    .admin-schemes h2 {
+        margin-bottom: 1.5rem;
+        color: #333;
+    }
+
+    .admin-schemes-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .admin-scheme-card {
+        background: white;
+        border: 2px solid #e1e5e9;
+        border-radius: 12px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .admin-scheme-card:hover {
+        border-color: #3b82f6;
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+    }
+
+    .admin-scheme-content h3 {
+        color: #333;
+        margin-bottom: 0.5rem;
+    }
+
+    .admin-scheme-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .admin-form {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .admin-form h2 {
+        text-align: center;
+        margin-bottom: 2rem;
+        color: #333;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+        text-align: left;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #333;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e1e5e9;
+        border-radius: 8px;
+        font-size: 16px;
+        font-family: inherit;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #3b82f6;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-sm {
+        padding: 8px 16px;
+        font-size: 14px;
+    }
+
+    .btn-danger {
+        background: #ef4444;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #dc2626;
+    }
+
+    @media (max-width: 768px) {
+        .admin-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .admin-actions {
+            justify-content: center;
+        }
+
+        .admin-schemes-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+    }
+`;
+
+document.head.appendChild(adminStyles);
+
 // Add animation styles
 const style = document.createElement('style');
 style.textContent = `
