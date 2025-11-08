@@ -260,17 +260,26 @@ function updateAuthUI() {
         if (loginBtn) loginBtn.style.display = 'none';
         if (registerBtn) registerBtn.style.display = 'none';
         if (heroRegisterBtn) heroRegisterBtn.style.display = 'none';
+
         if (profileBtn) {
             profileBtn.style.display = 'inline';
-            profileBtn.textContent = `Welcome, ${currentUser.username}`;
+            profileBtn.textContent = `${currentUser.username}${currentUser.role === 'admin' ? ' (Admin)' : ''}`;
         }
+
         if (logoutBtn) logoutBtn.style.display = 'inline';
+
+        // Show admin dashboard link for admin users
+        if (currentUser.role === 'admin') {
+            addAdminNavLink();
+        }
     } else {
         if (loginBtn) loginBtn.style.display = 'inline';
         if (registerBtn) registerBtn.style.display = 'inline';
         if (heroRegisterBtn) heroRegisterBtn.style.display = 'inline';
         if (profileBtn) profileBtn.style.display = 'none';
         if (logoutBtn) logoutBtn.style.display = 'none';
+
+        removeAdminNavLink();
     }
 }
 
