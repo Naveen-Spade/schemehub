@@ -234,9 +234,11 @@ function showPage(pageName) {
 
     currentPage = pageName;
 
-    // Load page-specific data
+      // Load page-specific data
     if (pageName === 'schemes') {
         loadSchemes();
+    } else if (pageName === 'admin') {
+        showAdminDashboard();
     }
 
     // Close mobile menu
